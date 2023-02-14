@@ -5,6 +5,14 @@ import { abortCredit, commitCredit, prepareCredit } from './handlers/credits.js'
 import { abortDebit, commitDebit, prepareDebit } from './handlers/debits.js'
 import { updateIntent } from './handlers/intents.js'
 
+import * as persistence from './persistence.js'
+
+process.on('exit', async () => {
+  await persistence.shutdown()
+})
+
+await persistence.init()
+
 const bankName = 'Demo bank'
 const port = 3001
 

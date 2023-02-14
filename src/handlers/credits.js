@@ -4,7 +4,7 @@ import {
   endAction,
   saveIntent,
 } from './common.js'
-import { updateEntry } from '../persistence.js'
+import { transactionWrapper, updateEntry } from '../persistence.js'
 import { ledgerSigner, notifyLedger } from '../ledger.js'
 import {
   extractAndValidateData,
@@ -62,7 +62,9 @@ async function processPrepareCredit(entry) {
     entry.amount = amount
 
     // Save Entry.
-    await updateEntry(entry)
+    await transactionWrapper(async (client) => {
+      await updateEntry(client, entry)
+    })
 
     // Save Intent from Entry.
     await saveIntent(entry.data.intent)
