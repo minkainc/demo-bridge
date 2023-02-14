@@ -1,7 +1,7 @@
 import express from 'express'
 import { logRequest } from './middleware/logging.js'
 import { asyncErrorWrapper, handleErrors } from './middleware/errors.js'
-import { prepareCredit } from './handlers/credits.js'
+import { commitCredit, prepareCredit } from './handlers/credits.js'
 
 const bankName = 'Demo bank'
 const port = 3001
@@ -17,6 +17,7 @@ app.get('/', (req, res) => {
 })
 
 app.post('/credits', asyncErrorWrapper(prepareCredit))
+app.post('/credits/:handle/commit', asyncErrorWrapper(commitCredit))
 
 app.use(handleErrors)
 

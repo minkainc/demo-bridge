@@ -1,4 +1,9 @@
-import { beginActionNew, endAction, saveIntent } from './common.js'
+import {
+  beginActionExisting,
+  beginActionNew,
+  endAction,
+  saveIntent,
+} from './common.js'
 import { updateEntry } from '../persistence.js'
 import { ledgerSigner, notifyLedger } from '../ledger.js'
 import {
@@ -72,6 +77,57 @@ async function processPrepareCredit(entry) {
   } catch (error) {
     console.log(error)
     action.state = 'failed'
+    action.error = {
+      reason: 'bridge.unexpected',
+      detail: error.message,
+      failId: undefined,
+    }
+  }
+}
+
+export async function commitCredit(req, res) {
+  const action = 'commit-credit'
+  let { alreadyRunning, entry } = await beginActionExisting({
+    request: req,
+    action,
+    previousStates: ['prepared'],
+  })
+
+  res.sendStatus(202)
+
+  if (!alreadyRunning) {
+    await processCommitCredit(entry)
+    await endAction(entry)
+  }
+
+  await notifyLedger(entry, action, ['committed'])
+}
+
+async function processCommitCredit(entry) {
+  const action = entry.actions[entry.processingAction]
+  let transaction
+  try {
+    validateEntity(
+      { hash: action.hash, data: action.data, meta: action.meta },
+      ledgerSigner,
+    )
+    validateAction(action.action, entry.processingAction)
+
+    transaction = core.credit(
+      Number(entry.account),
+      entry.amount,
+      `${entry.handle}-credit`,
+    )
+    action.coreId = transaction.id
+
+    if (transaction.status !== 'COMPLETED') {
+      throw new Error(transaction.errorReason)
+    }
+
+    action.state = 'committed'
+  } catch (error) {
+    console.log(error)
+    action.state = 'error'
     action.error = {
       reason: 'bridge.unexpected',
       detail: error.message,
