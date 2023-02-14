@@ -135,3 +135,42 @@ async function processCommitCredit(entry) {
     }
   }
 }
+
+export async function abortCredit(req, res) {
+  const action = 'abort-credit'
+  let { alreadyRunning, entry } = await beginActionExisting({
+    request: req,
+    action,
+    previousStates: ['prepared', 'failed'],
+  })
+
+  res.sendStatus(202)
+
+  if (!alreadyRunning) {
+    await processAbortCredit(entry)
+    await endAction(entry)
+  }
+
+  await notifyLedger(entry, action, ['aborted'])
+}
+
+async function processAbortCredit(entry) {
+  const action = entry.actions[entry.processingAction]
+  try {
+    validateEntity(
+      { hash: action.hash, data: action.data, meta: action.meta },
+      ledgerSigner,
+    )
+    validateAction(action.action, entry.processingAction)
+
+    action.state = 'aborted'
+  } catch (error) {
+    console.log(error)
+    action.state = 'error'
+    action.error = {
+      reason: 'bridge.unexpected',
+      detail: error.message,
+      failId: undefined,
+    }
+  }
+}

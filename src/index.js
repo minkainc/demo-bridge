@@ -1,7 +1,7 @@
 import express from 'express'
 import { logRequest } from './middleware/logging.js'
 import { asyncErrorWrapper, handleErrors } from './middleware/errors.js'
-import { commitCredit, prepareCredit } from './handlers/credits.js'
+import { abortCredit, commitCredit, prepareCredit } from './handlers/credits.js'
 import { abortDebit, commitDebit, prepareDebit } from './handlers/debits.js'
 
 const bankName = 'Demo bank'
@@ -19,6 +19,7 @@ app.get('/', (req, res) => {
 
 app.post('/credits', asyncErrorWrapper(prepareCredit))
 app.post('/credits/:handle/commit', asyncErrorWrapper(commitCredit))
+app.post('/credits/:handle/abort', asyncErrorWrapper(abortCredit))
 
 app.post('/debits', asyncErrorWrapper(prepareDebit))
 app.post('/debits/:handle/commit', asyncErrorWrapper(commitDebit))
