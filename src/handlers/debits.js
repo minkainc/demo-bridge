@@ -1,4 +1,9 @@
-import { beginActionNew, endAction, saveIntent } from './common.js'
+import {
+  beginActionExisting,
+  beginActionNew,
+  endAction,
+  saveIntent,
+} from './common.js'
 import { ledgerSigner, notifyLedger } from '../ledger.js'
 import {
   extractAndValidateData,
@@ -69,6 +74,68 @@ async function processPrepareDebit(entry) {
   } catch (error) {
     console.log(error)
     action.state = 'failed'
+    action.error = {
+      reason: 'bridge.unexpected',
+      detail: error.message,
+      failId: undefined,
+    }
+  }
+}
+
+export async function commitDebit(req, res) {
+  const action = 'commit-debit'
+  let { alreadyRunning, entry } = await beginActionExisting({
+    request: req,
+    action,
+    previousStates: ['prepared'],
+  })
+
+  res.sendStatus(202)
+
+  if (!alreadyRunning) {
+    await processCommitDebit(entry)
+    await endAction(entry)
+  }
+
+  await notifyLedger(entry, action, ['committed'])
+}
+
+async function processCommitDebit(entry) {
+  const action = entry.actions[entry.processingAction]
+  let transaction
+  try {
+    validateEntity(
+      { hash: action.hash, data: action.data, meta: action.meta },
+      ledgerSigner,
+    )
+    validateAction(action.action, entry.processingAction)
+
+    transaction = core.release(
+      Number(entry.account),
+      entry.amount,
+      `${entry.handle}-release`,
+    )
+    action.coreId = transaction.id
+
+    if (transaction.status !== 'COMPLETED') {
+      throw new Error(transaction.errorReason)
+    }
+
+    transaction = core.debit(
+      Number(entry.account),
+      entry.amount,
+      `${entry.handle}-debit`,
+    )
+    action.coreId = transaction.id
+
+    if (transaction.status !== 'COMPLETED') {
+      throw new Error(transaction.errorReason)
+    }
+
+    action.state = 'committed'
+  } catch (error) {
+    console.log(error)
+    action.state = 'error'
     action.error = {
       reason: 'bridge.unexpected',
       detail: error.message,
