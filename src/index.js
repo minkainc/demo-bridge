@@ -1,6 +1,7 @@
 import express from 'express'
 import { logRequest } from './middleware/logging.js'
-import { handleErrors } from './middleware/errors.js'
+import { asyncErrorWrapper, handleErrors } from './middleware/errors.js'
+import { prepareCredit } from './handlers/credits.js'
 
 const bankName = 'Demo bank'
 const port = 3001
@@ -14,6 +15,8 @@ app.use(logRequest)
 app.get('/', (req, res) => {
   res.send(`${bankName} is running!`)
 })
+
+app.post('/v2/credits', asyncErrorWrapper(prepareCredit))
 
 app.use(handleErrors)
 
