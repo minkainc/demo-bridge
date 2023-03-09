@@ -10,7 +10,7 @@ import {
   validateAction,
   validateEntity,
 } from '../validators.js'
-import { updateEntry } from '../persistence.js'
+import { transactionWrapper, updateEntry } from '../persistence.js'
 import core from '../core.js'
 
 export async function prepareDebit(req, res) {
@@ -51,7 +51,9 @@ async function processPrepareDebit(entry) {
     entry.symbol = symbol
     entry.amount = amount
 
-    await updateEntry(entry)
+    await transactionWrapper(async (client) => {
+      await updateEntry(client, entry)
+    })
     await saveIntent(entry.data.intent)
 
     // Process the entry
