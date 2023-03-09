@@ -142,3 +142,56 @@ async function processCommitDebit(entry) {
     }
   }
 }
+
+export async function abortDebit(req, res) {
+  const action = 'abort'
+  let { alreadyRunning, entry } = await beginActionExisting({
+    request: req,
+    action,
+    previousStates: ['prepared', 'failed'],
+  })
+
+  res.sendStatus(202)
+
+  if (!alreadyRunning) {
+    await processAbortDebit(entry)
+    await endAction(entry)
+  }
+
+  await notifyLedger(entry, action, ['aborted'])
+}
+
+async function processAbortDebit(entry) {
+  const action = entry.actions[entry.processingAction]
+  let transaction
+  try {
+    validateEntity(
+      { hash: action.hash, data: action.data, meta: action.meta },
+      ledgerSigner,
+    )
+    validateAction(action.action, entry.processingAction)
+
+    if (entry.previousState === 'prepared') {
+      transaction = core.release(
+        Number(entry.account),
+        entry.amount,
+        `${entry.handle}-release`,
+      )
+      action.coreId = transaction.id.toString()
+
+      if (transaction.status !== 'COMPLETED') {
+        throw new Error(transaction.errorReason)
+      }
+    }
+
+    action.state = 'aborted'
+  } catch (error) {
+    console.log(error)
+    action.state = 'error'
+    action.error = {
+      reason: 'bridge.unexpected-error',
+      detail: error.message,
+      failId: undefined,
+    }
+  }
+}
