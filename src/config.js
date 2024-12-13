@@ -4,7 +4,7 @@ export const config = {
    * or saving anything into the database.
    */
   instantlySign: process.env.INSTANTLY_SIGN === "true",
-  port: process.env.PORT || 3150,
+  port: process.env.PORT || 8080,
   bankName: process.env.BANK_NAME || "Demo bank",
   dbPassword: process.env.DB_PASSWORD || "bridge-service",
   dbUsername: process.env.DB_USERNAME || "bridge-service",

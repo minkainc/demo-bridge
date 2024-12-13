@@ -34,7 +34,7 @@ app.use(express.json());
 app.use(logRequest);
 
 app.get("/", (req, res) => {
-  res.send(`${bankName} is running!`);
+  res.status(200).send(`${bankName} is running!`);
 });
 
 app.post("/v2/credits", asyncErrorWrapper(prepareCredit));
