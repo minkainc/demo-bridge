@@ -2,18 +2,18 @@
 export function asyncErrorWrapper(func) {
   return async (req, res, next) => {
     try {
-      return await func(req, res, next)
+      return await func(req, res, next);
     } catch (error) {
-      next(error)
+      next(error);
     }
-  }
+  };
 }
 
 // This needs to go after all route handlers to log the errors
 // and send the appropriate response to the client.
 export function handleErrors(err, req, res, next) {
-  console.log(err)
+  console.log(err);
   if (!res.headersSent) {
-    res.sendStatus(500)
+    res.sendStatus(500);
   }
 }

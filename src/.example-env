@@ -1,0 +1,16 @@
+# Ledger configuration
+LEDGER_HANDLE=load-test-ledger
+LEDGER_URL=http://localhost:3000/v2
+
+# Bank keypair configuration
+BANK_KEYPAIR_FORMAT=ed25519-raw
+BANK_KEYPAIR_PUBLIC=your_bank_keypair_public
+BANK_KEYPAIR_SECRET=your_bank_keypair_secret
+
+# Ledger keypair configuration
+LEDGER_KEYPAIR_FORMAT=ed25519-raw
+LEDGER_KEYPAIR_PUBLIC=your_ledger_keypair_public
+
+# Other configurations
+INSTANTLY_SIGN=true
+PORT=3150

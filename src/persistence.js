@@ -1,23 +1,24 @@
-import pg from 'pg'
+import pg from "pg";
+import { config } from "./config.js";
 
-let pool
+let pool;
 
 export async function init() {
   pool = new pg.Pool({
-    user: 'bridge-service',
-    host: 'localhost',
-    database: 'bridge-service',
-    password: 'bridge-service',
-    port: 5433,
-  })
+    user: config.dbUsername,
+    host: config.dbHost,
+    database: config.dbName,
+    password: config.dbPassword,
+    port: config.dbPort,
+  });
 
-  pool.on('error', (err, client) => {
-    console.error('Unexpected error on idle client', err)
-  })
+  pool.on("error", (err, client) => {
+    console.error("Unexpected error on idle client", err);
+  });
 }
 
 export async function shutdown() {
-  await pool.end()
+  await pool.end();
 }
 
 export async function getEntry(client, handle) {
@@ -29,7 +30,7 @@ export async function getEntry(client, handle) {
              WHERE "handle" = $1`,
       values: [handle],
     })
-  ).rows[0]
+  ).rows[0];
 }
 
 export async function createEntry(client, entry) {
@@ -55,7 +56,7 @@ export async function createEntry(client, entry) {
         entry.processingStart,
       ],
     })
-  ).rows[0]
+  ).rows[0];
 }
 
 export async function getEntryForUpdate(client, handle) {
@@ -68,7 +69,7 @@ export async function getEntryForUpdate(client, handle) {
              FOR UPDATE`,
       values: [handle],
     })
-  ).rows[0]
+  ).rows[0];
 }
 
 export async function updateEntry(client, entry) {
@@ -99,7 +100,7 @@ export async function updateEntry(client, entry) {
         entry.handle,
       ],
     })
-  ).rows[0]
+  ).rows[0];
 }
 
 export async function upsertIntent(client, intent) {
@@ -112,23 +113,23 @@ export async function upsertIntent(client, intent) {
                 RETURNING *`,
       values: [intent.handle, intent.hash, intent.data, intent.meta],
     })
-  ).rows[0]
+  ).rows[0];
 }
 
 export async function transactionWrapper(func) {
-  const client = await pool.connect()
+  const client = await pool.connect();
   try {
-    await client.query('BEGIN')
+    await client.query("BEGIN");
 
-    const result = await func(client)
+    const result = await func(client);
 
-    await client.query('COMMIT')
+    await client.query("COMMIT");
 
-    return result
+    return result;
   } catch (error) {
-    await client.query('ROLLBACK')
-    throw error
+    await client.query("ROLLBACK");
+    throw error;
   } finally {
-    client.release()
+    client.release();
   }
 }

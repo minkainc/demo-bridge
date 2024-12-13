@@ -1,42 +1,54 @@
-import express from 'express'
-import { logRequest } from './middleware/logging.js'
-import { asyncErrorWrapper, handleErrors } from './middleware/errors.js'
-import { abortCredit, commitCredit, prepareCredit } from './handlers/credits.js'
-import { abortDebit, commitDebit, prepareDebit } from './handlers/debits.js'
-import { updateIntent } from './handlers/intents.js'
-import * as persistence from './persistence.js'
+import "./load-env.js";
+import express from "express";
+import { logRequest } from "./middleware/logging.js";
+import { asyncErrorWrapper, handleErrors } from "./middleware/errors.js";
+import {
+  abortCredit,
+  commitCredit,
+  prepareCredit,
+} from "./handlers/credits.js";
+import { abortDebit, commitDebit, prepareDebit } from "./handlers/debits.js";
+import { updateIntent } from "./handlers/intents.js";
+import * as persistence from "./persistence.js";
+import { config } from "./config.js";
 
-process.on('exit', async () => {
-  await persistence.shutdown()
-})
+console.log(
+  `Running bridge with instant signing set to ${config.instantlySign}`
+);
 
-await persistence.init()
+process.on("exit", async () => {
+  await persistence.shutdown();
+});
 
-const bankName = 'Demo bank'
-const port = 3001
+if (!config.instantlySign) {
+  await persistence.init();
+}
 
-const app = express()
+const bankName = config.bankName;
+const port = config.port;
 
-app.use(express.json())
+const app = express();
 
-app.use(logRequest)
+app.use(express.json());
 
-app.get('/', (req, res) => {
-  res.send(`${bankName} is running!`)
-})
+app.use(logRequest);
 
-app.post('/v2/credits', asyncErrorWrapper(prepareCredit))
-app.post('/v2/credits/:handle/commit', asyncErrorWrapper(commitCredit))
-app.post('/v2/credits/:handle/abort', asyncErrorWrapper(abortCredit))
+app.get("/", (req, res) => {
+  res.send(`${bankName} is running!`);
+});
 
-app.post('/v2/debits', asyncErrorWrapper(prepareDebit))
-app.post('/v2/debits/:handle/commit', asyncErrorWrapper(commitDebit))
-app.post('/v2/debits/:handle/abort', asyncErrorWrapper(abortDebit))
+app.post("/v2/credits", asyncErrorWrapper(prepareCredit));
+app.post("/v2/credits/:handle/commit", asyncErrorWrapper(commitCredit));
+app.post("/v2/credits/:handle/abort", asyncErrorWrapper(abortCredit));
 
-app.put('/v2/intents/:handle', asyncErrorWrapper(updateIntent))
+app.post("/v2/debits", asyncErrorWrapper(prepareDebit));
+app.post("/v2/debits/:handle/commit", asyncErrorWrapper(commitDebit));
+app.post("/v2/debits/:handle/abort", asyncErrorWrapper(abortDebit));
 
-app.use(handleErrors)
+app.put("/v2/intents/:handle", asyncErrorWrapper(updateIntent));
+
+app.use(handleErrors);
 
 app.listen(port, () => {
-  console.log(`${bankName} running on port ${port}`)
-})
+  console.log(`${bankName} running on port ${port}`);
+});
